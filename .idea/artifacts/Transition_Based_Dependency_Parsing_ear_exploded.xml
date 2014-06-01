@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-ear" name="Transition-Based Dependency Parsing:ear exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/Transition_Based_Dependency_Parsing_ear_exploded</output-path>
+    <root id="root">
+      <element id="javaee-facet-resources" facet="Transition-Based Dependency Parsing/javaeeApplication/javaEEApplication" />
+    </root>
+  </artifact>
+</component>
