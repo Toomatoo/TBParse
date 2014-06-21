@@ -1,9 +1,8 @@
 package cn.edu.pku.parser.main;
 
 import cn.edu.pku.parser.train.WordTrain;
-import de.bwaldvogel.liblinear.*;
-
-import java.util.Stack;
+import cn.edu.pku.parser.train.WordTrainStr;
+import cn.edu.pku.parser.util.Stemmer;
 
 
 public class Main {
@@ -39,9 +38,11 @@ public class Main {
         double prediction = Linear.predict(model, instance);
         System.out.println(prediction);
         */
+
         String flname = "./data/trn.conll08";
-        WordTrain t = new WordTrain(flname);
+        WordTrainStr t = new WordTrainStr(flname);
         t.train();
+
     }
 
 }

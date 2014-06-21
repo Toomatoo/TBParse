@@ -33,7 +33,7 @@ public class Perceptron {
     //ArrayList<ArrayList<String>> paramStr = new ArrayList<ArrayList<String>>();
     ArrayList<HashMap<String, Integer>> paramStr = new ArrayList<HashMap<String, Integer>>();
     /* Increment or Decrement Unit */
-    final static double var = 1;
+    final static double var = 0.1;
     /* Gen */
     Gen g;
     /**
@@ -76,6 +76,7 @@ public class Perceptron {
         while(true) {
             int error = trainIteration(featureLabel);
             System.out.println(error);
+            System.out.println( (double)error / featureLabel.size());
             if(((double)error) / featureLabel.size() <= precision)
                 break;
         }
@@ -127,10 +128,8 @@ public class Perceptron {
             double tmpMaxSCORE = -1111111111;
 
             ArrayList<String> genlabels = new ArrayList<String>();
-            if(g != null)
-                genlabels = g.ChunkGen(labels, pre_label);
-            else
-                genlabels.addAll(labels);
+
+            genlabels.addAll(labels);
             for(int l=0; l<labels.size(); l++) {
                 if(!genlabels.contains(labels.get(l)))
                     continue;
@@ -179,7 +178,7 @@ public class Perceptron {
     /**
      *
      */
-    public String labelofInstance(String feature, String pre_label) {
+    public String labelofInstance(String feature, ArrayList<String> validlabels) {
         // Split from the argument to get features and label
         String []str = feature.split("__");
         ArrayList<String> features = new ArrayList<String>();
@@ -192,7 +191,7 @@ public class Perceptron {
 
         ArrayList<String> genlabels = new ArrayList<String>();
         if(g != null)
-            genlabels = g.ChunkGen(labels, pre_label);
+            genlabels = validlabels;
         else
             genlabels.addAll(labels);
         for(int l=0; l<labels.size(); l++) {
@@ -217,4 +216,27 @@ public class Perceptron {
         return labels.get(indexofMaxLabel);
     }
 
+    public double[] labelScores(String feature) {
+        // Split from the argument to get features and label
+        String []str = feature.split("__");
+        ArrayList<String> features = new ArrayList<String>();
+        for(int j=0; j<sumoftemplates; j++)
+            features.add(str[j*2+1]);
+
+        double []score = new double[labels.size()];
+
+        ArrayList<String> genlabels = new ArrayList<String>();
+
+        for(int l=0; l<labels.size(); l++) {
+            score[l] = 0;
+            for(int tplate=0; tplate<sumoftemplates; tplate++) {
+                if(paramStr.get(tplate).containsKey(features.get(tplate)))
+                    score[l] += param.get(l).get(tplate).get(
+                            paramStr.get(tplate).get(features.get(tplate))
+                    );
+            }
+        }
+
+        return score;
+    }
 }

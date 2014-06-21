@@ -9,10 +9,7 @@ import de.bwaldvogel.liblinear.Feature;
 import de.bwaldvogel.liblinear.Linear;
 import de.bwaldvogel.liblinear.Model;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
@@ -34,17 +31,14 @@ public class WordTrain {
 
     // Words and PoSs indexing
     HashMap<String, Integer> indexOfword = new HashMap<String, Integer>();
-    HashMap<String, Integer> indexOfPoS = new HashMap<String, Integer>();
 
     // Features and Actions for standard classifier
     Machine machine = new Machine();
 
 
     public WordTrain(String flname) throws Exception {
-        indexOfword.put("%%NULL%%", 0);
-        indexOfPoS.put("%%NULL%%", 0);
-        indexOfword.put("%%ROOT%%", 1);
-        indexOfPoS.put("%%ROOT%%", 1);
+        indexOfword.put("%%NULL%%", 1);
+        indexOfword.put("%%ROOT%%", 2);
 
         // Read training data and store them in words after transferring
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(flname), "utf-8"));
@@ -69,10 +63,11 @@ public class WordTrain {
                 words.add(w);
                 sentence.add(w);
                 // Build the words and PoSs indexing system
-                if(!indexOfword.containsKey(elems[1]))
-                    indexOfword.put(elems[1], indexOfword.size());
-                if(!indexOfPoS.containsKey(elems[3]))
-                    indexOfPoS.put(elems[3], indexOfPoS.size());
+/*改成了全部小写*/
+                if(!indexOfword.containsKey(elems[1].toLowerCase()))
+                    indexOfword.put(elems[1].toLowerCase(), indexOfword.size()+1);
+                if(!indexOfword.containsKey(elems[3]))
+                    indexOfword.put(elems[3], indexOfword.size()+1);
             }
         }
 
@@ -116,8 +111,8 @@ public class WordTrain {
 /* 和PPT不符的部分 */
                 // Form the features at this stage
                 //  Transmit stack, queue, indexOfqueue into a machine of extracting features
-                Feature[] fts = (new ExtractFeature()).features(stack, _sentence, indexOfwordInsen, sumOffeatures,
-                                    indexOfword, indexOfPoS);
+                Feature[] fts = (new ExtractFeature()).features(stack, _sentence, __sentence, indexOfwordInsen, sumOffeatures,
+                        indexOfword);
                 // Get gold action
                 double act = getGoldaction(stack, _sentence, indexOfwordInsen, sentences.get(i));
                 //  Move the current stage with the gold action
@@ -148,16 +143,16 @@ public class WordTrain {
 
         // Form the machine
         machine.problem.l = trainFeats.size();
-        machine.problem.n = this.sumOffeatures;
+        machine.problem.n = 28*indexOfword.size();
 /* 这可能有错误 */
         machine.problem.x = new Feature[trainFeats.size()][];
         machine.problem.y = new double[trainFeats.size()];
+
         for(int i=0; i<trainFeats.size(); i++) {
             machine.problem.x[i] = trainFeats.get(i);
             machine.problem.y[i] = actions.get(i);
         }
-        machine.problem.bias = -1;
-        System.out.println();
+        //machine.problem.bias = -1;
 
     }
 
@@ -165,17 +160,18 @@ public class WordTrain {
     /* Put into classifier and get a model*/
     public void train() throws IOException {
         // formFeatures
-        //formFeatures();
-        Perceptron p = formFeaturesStr();
-        test(p);
-        // Put into classifier
-        //Model model = Linear.train(machine.problem, machine.parameter);
+        formFeatures();
 
+        // Put into classifier
+        Model model = Linear.train(machine.problem, machine.parameter);
+
+        // Test
+        test(model);
     }
 
 
     double getGoldaction(Stack<Word> stack, ArrayList<Word> sentence, int indexOfwordInsen, ArrayList<Word> goldsentence) {
-        ArrayList<String> validActions = getValidActions(indexOfwordInsen, stack, sentence);
+        //ArrayList<String> validActions = getValidActions(indexOfwordInsen, stack, sentence);
         if(!stack.isEmpty()) {
             Word wStack = stack.peek();
             Word wSen = sentence.get(indexOfwordInsen);
@@ -196,14 +192,18 @@ public class WordTrain {
      * @param sentence
      * @return
      */
-    ArrayList<String> getValidActions(int index, Stack<Word> stack, ArrayList<Word> sentence) {
-        ArrayList<String> valid = new ArrayList<String>();
+    ArrayList<Double> getValidActions(int index, Stack<Word> stack, ArrayList<Word> sentence) {
+        ArrayList<Double> valid = new ArrayList<Double>();
         if(index < sentence.size()) {
-            valid.add("SHIFT");
-            if(!stack.empty()) {
-                valid.add("LEFT");
-                valid.add("RIGHT");
-            }
+            if(index < sentence.size()-1 ||
+                    stack.size() == 0)
+                valid.add(SHIFT);
+
+            if(stack.size() >= 1)
+                valid.add(RIGHT);
+
+            if(stack.size() >= 2)
+                valid.add(LEFT);
         }
         return valid;
     }
@@ -218,76 +218,8 @@ public class WordTrain {
 
 
 
-   Perceptron formFeaturesStr() {
-   // For each step in SHIFT-REDUCE process
-        //  Define feature templates and form entities
-        //  Get gold action at current stage
-        //NOTE: after forming the features, they are just some vectors facing the classifier.
 
-
-        ArrayList<String> trainFeats = new ArrayList<String>();
-        ArrayList<Double> actions = new ArrayList<Double>();
-        // From with a sentence unit
-        // Process of SHIFT-LEFT-RIGHT
-        for (int i = 0; i < sentences.size(); i++) {
-            if (sentences.get(i).size() == 1)
-                continue;
-            ArrayList<Word> _sentence = new ArrayList<Word>();
-            for (int j = 0; j < sentences.get(i).size(); j++) {
-                Word w = sentences.get(i).get(j);
-// -2 for default
-                _sentence.add(new Word(w.index, w.word, w.PoS, -2));
-            }
-            ArrayList<Word> __sentence = new ArrayList<Word>(_sentence);
-            Stack<Word> stack = new Stack<Word>();
-            //Queue<Word> queue = new LinkedBlockingQueue(sentences.get(i));
-            int indexOfwordInsen = 0;
-            // step by step
-
-            while (indexOfwordInsen < sentences.get(i).size()) { // either of them is not empty
-/* 和PPT不符的部分 */
-                // Form the features at this stage
-                //  Transmit stack, queue, indexOfqueue into a machine of extracting features
-                String fts = (new ExtractFeatureStr()).features(stack, _sentence, __sentence, indexOfwordInsen, sumOffeatures,
-                        indexOfword, indexOfPoS);
-                // Get gold action
-                double act = getGoldaction(stack, _sentence, indexOfwordInsen, sentences.get(i));
-                //  Move the current stage with the gold action
-                if (act == SHIFT) {
-                    Word w = _sentence.get(indexOfwordInsen);
-                    indexOfwordInsen++;
-                    stack.push(w);
-                }
-                if (act == LEFT) {
-                    Word wStack = stack.pop();
-                    wStack.head = _sentence.get(indexOfwordInsen).index;
-                    _sentence.get(indexOfwordInsen).sons.add(wStack.index);
-/* 检查sentences里面词汇head是否同时被改变 */
-                }
-                if (act == RIGHT) {
-                    Word wStack = stack.pop();
-                    _sentence.get(indexOfwordInsen).head = wStack.index;
-                    wStack.sons.add(_sentence.get(indexOfwordInsen).index);
-
-                    _sentence.set(indexOfwordInsen, wStack);
-                }
-
-                // Store the information of current stage for forming features
-                trainFeats.add(fts + "label__" + String.valueOf(act));
-                actions.add(act);
-            }
-        }
-        ArrayList<String> labels = new ArrayList<String>();
-        labels.add("0.0");
-        labels.add("1.0");
-        labels.add("2.0");
-        Perceptron p = new Perceptron(12, labels, null);
-        p.trainMachine(trainFeats, 0.5);
-        System.out.println();
-        return p;
-    }
-
-    void test(Perceptron p) throws IOException {
+    void test(Model model) throws IOException {
         ArrayList<ArrayList<Word>> sentences = new ArrayList<ArrayList<Word>>();
 
         // Read training data and store them in words after transferring
@@ -309,7 +241,10 @@ public class WordTrain {
                         Integer.parseInt(elems[0]),
                         elems[1],
                         elems[3],
-                        Integer.parseInt(elems[8]));
+                        Integer.parseInt(elems[8])
+                        //0
+                );
+
                 words.add(w);
                 sentence.add(w);
             }
@@ -326,6 +261,7 @@ public class WordTrain {
         // Process of SHIFT-LEFT-RIGHT
         int right =0;
         int sum = 0;
+        FileWriter fileWriter = new FileWriter("./data/dev.re");
         for (int i = 0; i < sentences.size(); i++) {
             if (sentences.get(i).size() == 1)
                 continue;
@@ -345,37 +281,61 @@ public class WordTrain {
 /* 和PPT不符的部分 */
                 // Form the features at this stage
                 //  Transmit stack, queue, indexOfqueue into a machine of extracting features
-                String fts = (new ExtractFeatureStr()).features(stack, _sentence, __sentence, indexOfwordInsen, sumOffeatures,
-                        indexOfword, indexOfPoS);
+                Feature[] fts = (new ExtractFeature()).features(stack, _sentence, __sentence, indexOfwordInsen, sumOffeatures,
+                        indexOfword);
                 // Get gold action
-                String act = p.labelofInstance(fts, null);
+                double []d = new double[3];
+                double act = 0.0;
+                Linear.predictValues(model, fts, d);
+                ArrayList<Double> valid = getValidActions(indexOfwordInsen, stack, _sentence);
+                double tmpW = -1;
+                double actions[] = {0.0, 1.0, 2.0};
+                for(int v=0; v<3; v++) {
+                    if(valid.contains(actions[v]) && d[v] > tmpW) {
+                        act = actions[v];
+                        tmpW = d[v];
+                    }
+                }
+
                 //  Move the current stage with the gold action
-                if (act == "0.0") {
+                if (String.valueOf(act).equals("0.0")) {
                     Word w = _sentence.get(indexOfwordInsen);
                     indexOfwordInsen++;
                     stack.push(w);
                 }
-                if (act == "1.0") {
+                else if (String.valueOf(act).equals("1.0")) {
                     Word wStack = stack.pop();
                     wStack.head = _sentence.get(indexOfwordInsen).index;
                     _sentence.get(indexOfwordInsen).sons.add(wStack.index);
 /* 检查sentences里面词汇head是否同时被改变 */
                 }
-                if (act == "2.0") {
+                else if (String.valueOf(act).equals("2.0")) {
                     Word wStack = stack.pop();
                     _sentence.get(indexOfwordInsen).head = wStack.index;
                     wStack.sons.add(_sentence.get(indexOfwordInsen).index);
 
                     _sentence.set(indexOfwordInsen, wStack);
                 }
+                else
+                    System.out.println(act);
             }
             sum += __sentence.size();
             for(int ii=0; ii<__sentence.size(); ii++) {
+                if(ii != 0) {
+                    Word w = __sentence.get(ii);
+                    fileWriter.write(String.valueOf(w.index) + "\t" + w.word + "\t" + w.word + "\t" + w.PoS + "\t" + w.PoS
+                            + "\t_\t_\t_\t" + String.valueOf(w.head) + "\tX\t");
+                    //for(int jj = 0; jj<100; jj++)
+                    //    fileWriter.write("_\t");
+                    fileWriter.write("_\n");
+
+                }
                 if(__sentence.get(ii).head == sentences.get(i).get(ii).head)
                     right ++;
             }
-
+            fileWriter.write("\n");
         }
+        fileWriter.close();
         System.out.println((double)right/sum);
     }
 

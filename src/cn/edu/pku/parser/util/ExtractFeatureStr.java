@@ -23,16 +23,36 @@ public class ExtractFeatureStr {
         String f = "";
 
         /* Feature from stack */
-        String stackF = getStackFeatures(stack, 1, indexOfword, indexOfPoS);
+        String stackF = getStackFeatures(stack, 1, indexOfword, indexOfPoS);//1-2
         f = stackF;
 
         /* Feature from queue in sentence */
-        String stackQ = getQueueFeatures(sentence, 1, indexOfwordInsen, indexOfword, indexOfPoS);
+        String stackQ = getQueueFeatures(sentence, 3, indexOfwordInsen, indexOfword, indexOfPoS);//1-2
         f = f + stackQ;
 
         /* Feature from tree in sentence */
-        String stackT = getTreeFeatures(stack, sentence, _sentence, 1, indexOfwordInsen, indexOfword, indexOfPoS);
+        String stackT = getTreeFeatures(stack, sentence, _sentence, 3, indexOfwordInsen, indexOfword, indexOfPoS);//1-8
         f = f + stackT;
+
+        /* Feature from distance information */
+        String stackD = getDistanceFeatures(stack, sentence, _sentence, indexOfwordInsen, indexOfword, indexOfPoS);//1
+        f += stackD;
+
+        /* Feature from numbers of sons */
+        String stackS = getSonFeatures(stack, sentence, _sentence, indexOfwordInsen, indexOfword, indexOfPoS);//4
+        f += stackS;
+
+        /* Feature from Single Combination */
+        String stackSg = getSingleComb(stack, sentence, _sentence, indexOfwordInsen, indexOfword, indexOfPoS); //2
+        f += stackSg;
+
+        /* Feature from Pair Combination */
+        String stackP = getPairComb(stack, sentence, _sentence, indexOfwordInsen, indexOfword, indexOfPoS); //7
+        f += stackP;
+
+        /* Feature from Pair Combination */
+        String stackTr = getTriCom(stack, sentence, _sentence, indexOfwordInsen, indexOfword, indexOfPoS); //5
+        f += stackTr;
 
         return f;
     }
@@ -56,7 +76,7 @@ public class ExtractFeatureStr {
         for(int i=0; i<depth; i++) {
             Word w = stack.get(stack.size() - 1 - i);
 //System.out.println(w.word);
-            stackF += "stackWord" + "__" + w.word + "__" + "stackPoS" + "__" + w.PoS + "__";
+            stackF += "stackWord" + "__" + w.word.toLowerCase() + "__" + "stackPoS" + "__" + w.PoS + "__";
         }
         // complement the blank
         if(_depth > stack.size()) {
@@ -78,7 +98,7 @@ public class ExtractFeatureStr {
 
         for(int i=0; i<length; i++) {
             Word w = sentence.get(indexOfwordInsen+i);
-            stackQ += "queueWord" + "__" + w.word + "__" + "queuePoS" + "__" + w.PoS + "__";
+            stackQ += "queueWord" + "__" + w.word.toLowerCase() + "__" + "queuePoS" + "__" + w.PoS + "__";
         }
 
         // complement the blank
@@ -127,7 +147,7 @@ public class ExtractFeatureStr {
         }
         for(int i=0; i<sumofchild; i++) {
             Word w = _sentence.get(indexofchild.get(i));
-            stackT += "treeQLeftWord" + "__" + w.word + "__" + "treeQLeftPoS" + "__" + w.PoS + "__";
+            stackT += "treeQLeftWord" + "__" + w.word.toLowerCase() + "__" + "treeQLeftPoS" + "__" + w.PoS + "__";
         }
         // complement the blank
         if(sumofchild < sum) {
@@ -151,7 +171,7 @@ public class ExtractFeatureStr {
         }
         for(int i=0; i<sumofchild; i++) {
             Word w = _sentence.get(indexofchild.get(i));
-            stackT += "treeQRightWord" + "__" + w.word + "__" + "treeQRightPoS" + "__" + w.PoS + "__";
+            stackT += "treeQRightWord" + "__" + w.word.toLowerCase() + "__" + "treeQRightPoS" + "__" + w.PoS + "__";
         }
         // complement the blank
         if(sumofchild < sum) {
@@ -178,7 +198,7 @@ public class ExtractFeatureStr {
             }
             for (int i = 0; i < sumofchild; i++) {
                 w = _sentence.get(indexofchild.get(i));
-                stackT += "treeSLeftWord" + "__" + w.word + "__" + "treeSLeftPoS" + "__" + w.PoS + "__";
+                stackT += "treeSLeftWord" + "__" + w.word.toLowerCase() + "__" + "treeSLeftPoS" + "__" + w.PoS + "__";
             }
             // complement the blank
             if(sumofchild < sum) {
@@ -202,7 +222,7 @@ public class ExtractFeatureStr {
             }
             for (int i = 0; i < sumofchild; i++) {
                 w = _sentence.get(indexofchild.get(i));
-                stackT += "treeSLeftWord" + "__" + w.word + "__" + "treeSLeftPoS" + "__" + w.PoS + "__";
+                stackT += "treeSLeftWord" + "__" + w.word.toLowerCase() + "__" + "treeSLeftPoS" + "__" + w.PoS + "__";
             }
             // complement the blank
             if(sumofchild < sum) {
@@ -218,5 +238,261 @@ public class ExtractFeatureStr {
         }
 
         return stackT;
+    }
+
+
+    /**
+     *
+     * @param stack
+     * @param sentence
+     * @param _sentence
+     * @param indexOfwordInsen
+     * @param indexOfword
+     * @param indexOfPoS
+     * @return
+     */
+    String getDistanceFeatures(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen,
+                               HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+        String stackD = "";
+
+        if(stack.empty()) {
+
+            // distance
+            stackD += "disSS__%%NULL%%__";
+
+            // S0wd
+            stackD += "disSS__%%NULL%%__";
+            // S0pd
+            stackD += "disSS__%%NULL%%__";
+            // N0wd
+            stackD += "disSS__%%NULL%%__";
+            // N0pd
+            stackD += "disSS__%%NULL%%__";
+            // S0wN0wd
+            stackD += "disSS__%%NULL%%__";
+            // S0pN0pd
+            stackD += "disSS__%%NULL%%__";
+
+            return stackD;
+        }
+
+        String dis = String.valueOf(
+            Math.abs(stack.peek().index - sentence.get(indexOfwordInsen).index)
+        );
+
+        Word st = stack.peek();
+        Word sen = sentence.get(indexOfwordInsen);
+
+        // distance
+        stackD += "disSS__" + dis + "__";
+        // S0wd
+        stackD += "disSS__" + st.word.toLowerCase() + "-" + dis +"__";
+        // S0pd
+        stackD += "disSS__" + st.PoS + "-" + dis +"__";
+        // N0wd
+        stackD += "disSS__" + sen.word.toLowerCase() + "-" + dis +"__";
+        // N0pd
+        stackD += "disSS__" + sen.PoS + "-" + dis +"__";
+        // S0wN0wd
+        stackD += "disSS__" + st.word.toLowerCase() + "-" + sen.word.toLowerCase() + "-" + dis +"__";
+        // S0pN0pd
+        stackD += "disSS__" + st.PoS + "-" + st.PoS + "-" + dis +"__";
+
+        return stackD;
+    }
+
+    String getSonFeatures(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen,
+                          HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+        String stackS = "";
+
+
+        // Number of sons of stack word
+        int sumL = 0, sumR = 0;
+        if(stack.empty()) {
+            stackS += "sonsLStack__%%NULL%%__sonsRStack__%%NULL%%__";
+            // Combinations
+            stackS += "sons__%%NULL%%__";
+            stackS += "sons__%%NULL%%__";
+            stackS += "sons__%%NULL%%__";
+            stackS += "sons__%%NULL%%__";
+        }
+        else {
+            Word st = stack.peek();
+            for (int i = 0; i < st.sons.size(); i++) {
+                if (st.sons.get(i) < st.index)
+                    sumL++;
+                else
+                    sumR++;
+            }
+            stackS += "sonsLStack__" + String.valueOf(sumL) + "__sonsRStack__" + String.valueOf(sumR) + "__";
+
+            // Combinations
+            stackS += "sons__" + st.word.toLowerCase() + "-" + String.valueOf(sumL) + "__";
+            stackS += "sons__" + st.PoS + "-" + String.valueOf(sumL) + "__";
+            stackS += "sons__" + st.word.toLowerCase() + "-" + String.valueOf(sumR) + "__";
+            stackS += "sons__" + st.PoS + "-" + String.valueOf(sumR) + "__";
+        }
+
+
+        // Number of sons of sentence word
+        Word sen = sentence.get(indexOfwordInsen);
+        sumL = 0;
+        sumR = 0;
+        for(int i=0; i<sen.sons.size(); i++) {
+            if(sen.sons.get(i) < sen.index)
+                sumL ++;
+            else
+                sumR ++;
+        }
+        stackS += "sonsLSen__" + String.valueOf(sumL) + "__sonsRSen__" + String.valueOf(sumR) + "__";
+        // Combination
+        stackS += "sons__" + sen.word.toLowerCase() + "-" + String.valueOf(sumL) + "__";
+        stackS += "sons__" + sen.PoS + "-" + String.valueOf(sumL) + "__";
+        stackS += "sons__" + sen.word.toLowerCase() + "-" + String.valueOf(sumR) + "__";
+        stackS += "sons__" + sen.PoS + "-" + String.valueOf(sumR) + "__";
+
+        return stackS;
+    }
+
+    String getSingleComb(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen,
+                         HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+        String stackSg = "";
+        // Queue
+        Word sen = sentence.get(indexOfwordInsen);
+        stackSg += "queueWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "__";
+
+        if(indexOfwordInsen < _sentence.size()-1) {
+            sen = sentence.get(indexOfwordInsen+1);
+            stackSg += "queueWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "__";
+        }
+        else
+            stackSg += "queueWP__%%NULL$$__";
+        if(indexOfwordInsen < _sentence.size()-2) {
+            sen = sentence.get(indexOfwordInsen+2);
+            stackSg += "queueWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "__";
+        }
+        else
+            stackSg += "queueWP__%%NULL$$__";
+
+        // Stack
+        if(stack.empty())
+            stackSg += "stackWP__%%NULL%%__";
+        else {
+            Word st = stack.peek();
+            stackSg += "stackWP__" + st.word.toLowerCase() + "-" + st.PoS + "__";
+        }
+
+        return stackSg;
+    }
+
+    String getPairComb(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen,
+                       HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+        String stackP = "";
+
+        Word sen = sentence.get(indexOfwordInsen);
+        if(stack.empty()) {
+            // S0wpN0wp
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + "%%NULL%%__";
+            // S0wpN0w
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + "%%NULL%%__";
+            // S0wN0wp
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + "%%NULL%%__";
+            // S0wpN0p
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + "%%NULL%%__";
+            // S0pN0wp
+            stackP += "stackPWP__" + sen.PoS + "-" + "%%NULL%%__";
+            // S0wN0w
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + "%%NULL%%__";
+            // S0pN0p
+            stackP += "stackPWP__" + sen.PoS + "-" + "%%NULL%%__";
+        }
+        else {
+            Word st = stack.peek();
+            // S0wpN0wp
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + st.word.toLowerCase() + "-" + st.PoS + "__";
+            // S0wpN0w
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + st.word.toLowerCase() + "__";
+            // S0wN0wp
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + st.word.toLowerCase() + "-" + st.PoS + "__";
+            // S0wpN0p
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + sen.PoS + "-" + st.PoS + "__";
+            // S0pN0wp
+            stackP += "stackPWP__" + sen.PoS + "-" + st.word.toLowerCase() + "-" + st.PoS + "__";
+            // S0wN0w
+            stackP += "stackPWP__" + sen.word.toLowerCase() + "-" + st.word.toLowerCase() + "__";
+            // S0pN0p
+            stackP += "stackPWP__" + sen.PoS + "-" + st.PoS + "__";
+        }
+
+        return stackP;
+    }
+
+    String getTriCom(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen,
+                     HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+        String stackTr = "";
+
+        String N0, N1, N2, N0l;
+        String S0, S0l, S0r;
+
+        N0 = sentence.get(indexOfwordInsen).PoS;
+        if(indexOfwordInsen < _sentence.size()-1)
+            N1 = sentence.get(indexOfwordInsen+1).PoS;
+        else
+            N1 = "%%NULL%%";
+        if(indexOfwordInsen < _sentence.size()-2)
+            N2 = sentence.get(indexOfwordInsen+2).PoS;
+        else
+            N2 = "%%NULL%%";
+
+        if(!sentence.get(indexOfwordInsen).sons.isEmpty()) {
+            int idx = sentence.get(indexOfwordInsen).sons.get(0);
+            if(idx < indexOfwordInsen)
+                N0l = _sentence.get(idx).PoS;
+            else
+                N0l = "%%NULL%%";
+        }
+        else
+            N0l = "%%NULL%%";
+
+        if(!stack.empty()) {
+            Word st = stack.peek();
+            S0 = st.PoS;
+
+            if(!st.sons.isEmpty()) {
+                int idx = st.sons.get(0);
+                if(idx < indexOfwordInsen) {
+                    S0l = _sentence.get(idx).PoS;
+                }
+                else {
+                    S0l = "%%NULL%%";
+                }
+
+                idx = st.sons.get(st.sons.size()-1);
+                if(idx > indexOfwordInsen) {
+                    S0r = _sentence.get(idx).PoS;
+                }
+                else {
+                    S0r = "%%NULL%%";
+                }
+            }
+            else {
+                S0l = "%%NULL%%";
+                S0r = "%%NULL%%";
+
+            }
+        }
+        else {
+            S0 = "%%NULL%%";
+            S0l = "%%NULL%%";
+            S0r = "%%NULL%%";
+        }
+        ////////////
+        stackTr += "N0pN1pN2p__" + N0 + "-" + N1 + "-" + N2 + "__";
+        stackTr += "S0pN0pN1p__" + S0 + "-" + N0 + "-" + N1 + "__";
+        stackTr += "S0pS0lpN0p__" + S0 + "-" + S0l + "-" + N0 + "__";
+        stackTr += "S0pS0rpN0p__" + S0 + "-" + S0r + "-" + N0 + "__";
+        stackTr += "S0pN0pN0lp__" + S0 + "-" + N0 + "-" + N0l + "__";
+
+        return stackTr;
     }
 }

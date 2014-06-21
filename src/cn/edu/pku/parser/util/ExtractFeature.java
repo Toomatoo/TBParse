@@ -15,24 +15,25 @@ public class ExtractFeature {
      * @param indexOfwordInsen: index of word in sentence
      * @param sumOffeatures: sum of feature templates
      * @param indexOfword: used to get the index of a word
-     * @param indexOfPoS: used to get the index of a PoS
      * @return a feature vector of current stage
      */
-    public Feature[] features(Stack<Word> stack, ArrayList<Word> sentence, int indexOfwordInsen, int sumOffeatures,
-                              HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS) {
+    public Feature[] features(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int indexOfwordInsen, int sumOffeatures,
+                              HashMap<String, Integer> indexOfword) {
         ArrayList<Feature> f = new ArrayList<Feature>();
 
         int indexOffts = 0;
         /* Feature from stack */
-        ArrayList<FeatureNode> stackF = getStackFeatures(stack, 3, indexOfword, indexOfPoS, indexOffts);
+        ArrayList<FeatureNode> stackF = getStackFeatures(stack, 3, indexOfword, indexOffts);
         f.addAll(stackF);
         indexOffts += stackF.size();
+
         /* Feature from queue in sentence */
-        ArrayList<FeatureNode> stackQ = getQueueFeatures(sentence, 3, indexOfwordInsen, indexOfword, indexOfPoS, indexOffts);
+        ArrayList<FeatureNode> stackQ = getQueueFeatures(sentence, 3, indexOfwordInsen, indexOfword, indexOffts);
         f.addAll(stackQ);
         indexOffts += stackQ.size();
+
         /* Feature from tree in sentence */
-        ArrayList<FeatureNode> stackT = getTreeFeatures(stack, sentence, 2, indexOfwordInsen, indexOfword, indexOfPoS, indexOffts);
+        ArrayList<FeatureNode> stackT = getTreeFeatures(stack, sentence, _sentence, 2, indexOfwordInsen, indexOfword, indexOffts);
         f.addAll(stackT);
         indexOffts += stackT.size();
 
@@ -48,13 +49,13 @@ public class ExtractFeature {
      * @param stack: stack of current stage
      * @param depth: depth commanded
      * @param indexOfword: get word index
-     * @param indexOfPoS: get PoS index
      * @param index: feature index
      * @return
      */
     ArrayList<FeatureNode> getStackFeatures(Stack<Word> stack, int depth,
-                                            HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS,
+                                            HashMap<String, Integer> indexOfword,
                                             int index) {
+        int base = index * indexOfword.size();
         ArrayList<FeatureNode> stackF = new ArrayList<FeatureNode>();
         // Information from words and PoSs
         int _depth = depth;
@@ -62,15 +63,24 @@ public class ExtractFeature {
             depth = stack.size();
         for(int i=0; i<depth; i++) {
             Word w = stack.get(stack.size() - 1 - i);
-//System.out.println(w.word);
-            stackF.add( new FeatureNode(indexOfword.get(w.word), 1) );
-            stackF.add( new FeatureNode(indexOfPoS.get(w.PoS), 1) );
+            if(indexOfword.containsKey(w.word.toLowerCase()))
+                stackF.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+            else
+                stackF.add(new FeatureNode(base+1, 1));
+            base += indexOfword.size();
+            if(indexOfword.containsKey(w.PoS))
+                stackF.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+            else
+                stackF.add(new FeatureNode(base+1, 1));
+            base += indexOfword.size();
         }
         // complement the blank
         if(_depth > stack.size()) {
             for(int i=0; i<_depth-stack.size(); i++) {
-                stackF.add(new FeatureNode(0, 1));
-                stackF.add(new FeatureNode(0, 1));
+                stackF.add(new FeatureNode(base+1, 1));
+                base += indexOfword.size();
+                stackF.add(new FeatureNode(base+1, 1));
+                base += indexOfword.size();
             }
         }
         return stackF;
@@ -82,14 +92,13 @@ public class ExtractFeature {
      * @param length: length commanded
      * @param indexOfwordInsen: head position of sentence
      * @param indexOfword: get word index
-     * @param indexOfPoS: get PoS index
      * @param index: feature index
      * @return
      */
     ArrayList<FeatureNode> getQueueFeatures(ArrayList<Word> sentence, int length, int indexOfwordInsen,
-                                            HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS,
+                                            HashMap<String, Integer> indexOfword,
                                             int index) {
-        int indexHere = index;
+        int base = index * indexOfword.size();
         ArrayList<FeatureNode> stackQ = new ArrayList<FeatureNode>();
         // Information from words and PoSs
         int _length = length;
@@ -98,19 +107,25 @@ public class ExtractFeature {
 
         for(int i=0; i<length; i++) {
             Word w = sentence.get(indexOfwordInsen+i);
-            stackQ.add( new FeatureNode(indexOfword.get(w.word), 1) );
-            indexHere ++;
-            stackQ.add( new FeatureNode(indexOfPoS.get(w.PoS), 1) );
-            indexHere ++;
+            if(indexOfword.containsKey(w.word.toLowerCase()))
+                stackQ.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+            else
+                stackQ.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
+            if(indexOfword.containsKey(w.PoS))
+                stackQ.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+            else
+                stackQ.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
         }
 
         // complement the blank
         if(_length > sentence.size()-indexOfwordInsen) {
             for(int i=0; i<_length-sentence.size()+indexOfwordInsen; i++) {
-                stackQ.add( new FeatureNode(0, 1) );
-                indexHere ++;
-                stackQ.add( new FeatureNode(0, 1) );
-                indexHere ++;
+                stackQ.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                stackQ.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
             }
         }
         return stackQ;
@@ -123,13 +138,13 @@ public class ExtractFeature {
      * @param sum: sum of children commanded
      * @param indexOfwordInsen
      * @param indexOfword
-     * @param indexOfPoS
      * @param index
      * @return
      */
-    ArrayList<FeatureNode> getTreeFeatures(Stack<Word> stack, ArrayList<Word> sentence, int sum, int indexOfwordInsen,
-                                           HashMap<String, Integer> indexOfword, HashMap<String, Integer> indexOfPoS,
+    ArrayList<FeatureNode> getTreeFeatures(Stack<Word> stack, ArrayList<Word> sentence, ArrayList<Word> _sentence, int sum,
+                                           int indexOfwordInsen, HashMap<String, Integer> indexOfword,
                                            int index) {
+        int base = index * indexOfword.size();
         ArrayList<FeatureNode> stackT = new ArrayList<FeatureNode>();
         // Information from words and PoSs
         // Feature of Current Tree
@@ -139,86 +154,158 @@ public class ExtractFeature {
         // For queue:
         //  Left
         ArrayList<Integer> indexofchild = new ArrayList<Integer>();
-        for(int i=0; i<sum; i++)
+        for (int i = 0; i < sum; i++)
             indexofchild.add(-1);
         int sumofchild = 0;
-        for(int i=0; i<indexOfwordInsen; i++) {
-            if(sumofchild >= sum)
+        for (int i = 0; i < sentence.get(indexOfwordInsen).sons.size(); i++) {
+            if (sumofchild >= sum)
                 break;
-            if(sentence.get(i).head == indexOfwordInsen) {
-                indexofchild.set(sumofchild, i);
-                sumofchild ++;
+            int idx = sentence.get(indexOfwordInsen).sons.get(i);
+            if (idx < indexOfwordInsen) {
+                indexofchild.set(sumofchild, idx);
+                sumofchild++;
             }
         }
-        for(int i=0; i<sumofchild; i++) {
-            Word w = sentence.get(indexofchild.get(i));
-            stackT.add( new FeatureNode(indexOfword.get(w.word), 1) );
-            stackT.add( new FeatureNode(indexOfPoS.get(w.PoS), 1) );
+        for (int i = 0; i < sumofchild; i++) {
+            Word w = _sentence.get(indexofchild.get(i));
+            if(indexOfword.containsKey(w.word.toLowerCase()))
+                stackT.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+            else
+                stackT.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
+            if(indexOfword.containsKey(w.PoS))
+                stackT.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+            else
+                stackT.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
         }
         // complement the blank
-        if(sumofchild < sum) {
-            for(int i=0; i<sum-sumofchild; i++) {
-                stackT.add( new FeatureNode(0, 1) );
-                stackT.add( new FeatureNode(0, 1) );
+        if (sumofchild < sum) {
+            for (int i = 0; i < sum - sumofchild; i++) {
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
             }
         }
         //  Right
         indexofchild = new ArrayList<Integer>();
         sumofchild = 0;
-        for(int i=0; i<sum; i++)
+        for (int i = 0; i < sum; i++)
             indexofchild.add(-1);
-        for(int i=indexOfwordInsen+1; i<sentence.size(); i++) {
-            if(sumofchild >= sum)
+        for (int i = sentence.get(indexOfwordInsen).sons.size() - 1; i >= 0; i--) {
+            if (sumofchild >= sum)
                 break;
-            if(sentence.get(i).head == indexOfwordInsen) {
-                indexofchild.set(sumofchild, i);
-                sumofchild ++;
+            int idx = sentence.get(indexOfwordInsen).sons.get(i);
+            if (idx > indexOfwordInsen) {
+                indexofchild.set(sumofchild, idx);
+                sumofchild++;
             }
         }
-        for(int i=0; i<sumofchild; i++) {
-            Word w = sentence.get(indexofchild.get(i));
-            stackT.add( new FeatureNode(indexOfword.get(w.word), 1) );
-            stackT.add( new FeatureNode(indexOfPoS.get(w.PoS), 1) );
+        for (int i = 0; i < sumofchild; i++) {
+            Word w = _sentence.get(indexofchild.get(i));
+            if(indexOfword.containsKey(w.word.toLowerCase()))
+                stackT.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+            else
+                stackT.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
+            if(indexOfword.containsKey(w.PoS))
+                stackT.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+            else
+                stackT.add( new FeatureNode(base+1, 1) );
+            base += indexOfword.size();
         }
         // complement the blank
-        if(sumofchild < sum) {
-            for(int i=0; i<sum-sumofchild; i++) {
-                stackT.add( new FeatureNode(0, 1) );
-                stackT.add( new FeatureNode(0, 1) );
+        if (sumofchild < sum) {
+            for (int i = 0; i < sum - sumofchild; i++) {
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
             }
         }
-        // For Stack: Left
-        if(!stack.isEmpty()) {
+
+        // For Stack:
+        if (!stack.isEmpty()) {
+            // Left
             indexofchild = new ArrayList<Integer>();
             sumofchild = 0;
             Word w = stack.peek();
             for (int i = 0; i < sum; i++)
                 indexofchild.add(-1);
-            for (int i = 0; i < w.index; i++) {
+            for (int i = 0; i < w.sons.size(); i++) {
                 if (sumofchild >= sum)
                     break;
-                if (sentence.get(i).head == w.index) {
-                    indexofchild.set(sumofchild, i);
+                int idx = w.sons.get(i);
+                if (idx < indexOfwordInsen) {
+                    indexofchild.set(sumofchild, idx);
                     sumofchild++;
                 }
             }
             for (int i = 0; i < sumofchild; i++) {
-                w = sentence.get(indexofchild.get(i));
-                stackT.add(new FeatureNode(indexOfword.get(w.word), 1));
-                stackT.add(new FeatureNode(indexOfPoS.get(w.PoS), 1));
+                w = _sentence.get(indexofchild.get(i));
+                if(indexOfword.containsKey(w.word.toLowerCase()))
+                    stackT.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+                else
+                    stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                if(indexOfword.containsKey(w.PoS))
+                    stackT.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+                else
+                    stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
             }
             // complement the blank
-            if(sumofchild < sum) {
-                for(int i=0; i<sum-sumofchild; i++) {
-                    stackT.add( new FeatureNode(0, 1) );
-                    stackT.add( new FeatureNode(0, 1) );
+            if (sumofchild < sum) {
+                for (int i = 0; i < sum - sumofchild; i++) {
+                    stackT.add( new FeatureNode(base+1, 1) );
+                    base += indexOfword.size();
+                    stackT.add( new FeatureNode(base+1, 1) );
+                    base += indexOfword.size();
                 }
             }
-        }
-        else {
-            for(int i=0; i<sum; i++) {
-                stackT.add( new FeatureNode(0, 1) );
-                stackT.add( new FeatureNode(0, 1) );
+            // Right
+            indexofchild = new ArrayList<Integer>();
+            sumofchild = 0;
+            for (int i = 0; i < sum; i++)
+                indexofchild.add(-1);
+            for (int i = w.sons.size() - 1; i >= 0; i--) {
+                if (sumofchild >= sum)
+                    break;
+                int idx = w.sons.get(i);
+                if (idx > indexOfwordInsen) {
+                    indexofchild.set(sumofchild, idx);
+                    sumofchild++;
+                }
+            }
+            for (int i = 0; i < sumofchild; i++) {
+                w = _sentence.get(indexofchild.get(i));
+                if(indexOfword.containsKey(w.word.toLowerCase()))
+                    stackT.add( new FeatureNode(base + indexOfword.get(w.word.toLowerCase()), 1) );
+                else
+                    stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                if(indexOfword.containsKey(w.PoS))
+                    stackT.add( new FeatureNode(base + indexOfword.get(w.PoS), 1) );
+                else
+                    stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+            }
+            // complement the blank
+            if (sumofchild < sum) {
+                for (int i = 0; i < sum - sumofchild; i++) {
+                    stackT.add( new FeatureNode(base+1, 1) );
+                    base += indexOfword.size();
+                    stackT.add( new FeatureNode(base+1, 1) );
+                    base += indexOfword.size();
+                }
+            }
+        } else {
+            for (int i = 0; i < sum * 2; i++) {
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
+                stackT.add( new FeatureNode(base+1, 1) );
+                base += indexOfword.size();
             }
         }
 

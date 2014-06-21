@@ -1,0 +1,10 @@
+1	There	There	EX	EX	_	_	_	2	X	_
+2	is	is	VBZ	VBZ	_	_	_	0	X	_
+3	no	no	DT	DT	_	_	_	4	X	_
+4	asbestos	asbestos	NN	NN	_	_	_	2	X	_
+5	in	in	IN	IN	_	_	_	4	X	_
+6	our	our	PRP$	PRP$	_	_	_	5	X	_
+7	products	products	NNS	NNS	_	_	_	5	X	_
+8	now	now	RB	RB	_	_	_	7	X	_
+9	.	.	.	.	_	_	_	2	X	_
+

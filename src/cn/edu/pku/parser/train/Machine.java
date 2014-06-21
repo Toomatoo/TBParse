@@ -14,8 +14,6 @@ public class Machine {
     double eps = 0.01; // stopping criteria
 
     Parameter parameter = new Parameter(solver, C, eps);
-
-    Feature[][] features;
 }
 
 

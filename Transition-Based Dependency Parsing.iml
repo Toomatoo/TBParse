@@ -17,6 +17,8 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="liblinear" level="project" />
+    <orderEntry type="library" name="conll08-eval" level="project" />
+    <orderEntry type="library" name="whatswrong-0.2.3-standalone" level="project" />
   </component>
 </module>
 

@@ -24,4 +24,8 @@ public class Gen {
         }
         return al;
     }
+
+    public ArrayList<String> actionGen(ArrayList<String> actions) {
+        return actions;
+    }
 }
